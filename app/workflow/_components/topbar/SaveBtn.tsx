@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { useReactFlow } from "@xyflow/react";
 import { CheckIcon, Loader2Icon } from "lucide-react";
-import React from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 const SaveBtn = ({ workflowId }: { workflowId: string }) => {
   const { toObject } = useReactFlow();
+  const saveBtnRef = useRef<HTMLButtonElement>(null);
 
   const saveMutation = useMutation({
     mutationFn: UpdateWorkflow,
@@ -21,18 +22,38 @@ const SaveBtn = ({ workflowId }: { workflowId: string }) => {
     },
   });
 
+  const save = useCallback(() => {
+    const workflowDefinition = JSON.stringify(toObject());
+
+    toast.loading("Saving workflow...", { id: "save-workflow" });
+
+    saveMutation.mutate({ id: workflowId, definition: workflowDefinition });
+  }, [saveMutation, toObject, workflowId]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault(); // Prevent the default browser "save" action
+        save();
+      }
+    };
+
+    // Attach the event listener
+    document.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup the event listener on unmount
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [save]); // Empty dependency array to ensure this effect runs only once
+
   return (
     <Button
+      ref={saveBtnRef}
       disabled={saveMutation.isPending}
       variant={"outline"}
       className="flex items-center gap-2"
-      onClick={() => {
-        const workflowDefinition = JSON.stringify(toObject());
-
-        toast.loading("Saving workflow...", { id: "save-workflow" });
-
-        saveMutation.mutate({ id: workflowId, definition: workflowDefinition });
-      }}
+      onClick={save}
     >
       {saveMutation.isPending ? (
         <Loader2Icon size={16} className="animate-spin" />

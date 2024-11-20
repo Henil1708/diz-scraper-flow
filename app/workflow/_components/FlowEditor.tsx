@@ -20,6 +20,7 @@ import { TaskType } from "@/types/task";
 import NodeComponent from "./nodes/NodeComponent";
 import { AppNode } from "@/types/appNode";
 import DeleteableEdge from "./edges/DeleteableEdge";
+import { TaskRegistry } from "@/lib/workflow/task/registry";
 
 const nodeTypes = {
   FlowScrapeNode: NodeComponent,
@@ -92,7 +93,40 @@ const FlowEditor = ({ workflow }: { workflow: Workflow }) => {
     [nodes, setEdges, updateNodeData]
   );
 
-  console.log("@Nodes", nodes);
+  const isValidConnection = useCallback(
+    (connection: Edge | Connection) => {
+      // No self-connections allowed
+      if (connection.source === connection.target) {
+        return false;
+      }
+
+      const source = nodes.find((node) => node.id === connection.source);
+      const target = nodes.find((node) => node.id === connection.target);
+
+      if (!source || !target) {
+        console.error("Invalid connection: source or target node not found");
+        return false;
+      }
+
+      const sourceTask = TaskRegistry[source.data.type];
+      const targetTask = TaskRegistry[target.data.type];
+
+      const output = sourceTask.outputs.find(
+        (o) => o.name === connection.sourceHandle
+      );
+      const input = sourceTask.inputs.find(
+        (i) => i.name === connection.targetHandle
+      );
+
+      if (input?.type !== output?.type) {
+        console.error("Invalid connection: target mismatch");
+        return false;
+      }
+
+      return true;
+    },
+    [nodes]
+  );
 
   return (
     <main className="h-full w-full">
@@ -109,6 +143,7 @@ const FlowEditor = ({ workflow }: { workflow: Workflow }) => {
         onDragOver={onDragOver}
         onDrop={onDrop}
         onConnect={onConnect}
+        isValidConnection={isValidConnection}
       >
         <Controls position="top-left" fitViewOptions={fitViewOptions} />
         <Background variant={BackgroundVariant.Dots} gap={12} size={1} />

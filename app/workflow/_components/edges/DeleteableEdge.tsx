@@ -5,13 +5,15 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   EdgeProps,
+  getBezierEdgeCenter,
+  getBezierPath,
   getSmoothStepPath,
   useReactFlow,
 } from "@xyflow/react";
 import React from "react";
 
 const DeleteableEdge = (props: EdgeProps) => {
-  const [edgePath, labelX, labelY] = getSmoothStepPath(props);
+  const [edgePath, labelX, labelY] = getBezierPath(props);
   const { setEdges } = useReactFlow();
 
   return (
